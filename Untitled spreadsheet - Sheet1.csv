@@ -1,0 +1,431 @@
+<!doctype html>
+"<html lang=""en"" class=""h-full"">"
+<head>
+"<meta charset=""UTF-8"">"
+"<meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">"
+<title>Nutritional Database</title>
+"<script src=""https://cdn.tailwindcss.com""></script>"
+"<script src=""/_sdk/element_sdk.js""></script>"
+"<link rel=""preconnect"" href=""https://fonts.googleapis.com"">"
+"<link rel=""preconnect"" href=""https://fonts.gstatic.com"" crossorigin>"
+"<link href=""https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&amp;display=swap"" rel=""stylesheet"">"
+<style>
+body {
+box-sizing: border-box;
+}
+* {
+"font-family: 'DM Sans', sans-serif;"
+}
+.scrollbar-thin::-webkit-scrollbar {
+width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+background: #d1d5db;
+border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+background: #9ca3af;
+}
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+animation: fadeIn 0.3s ease-out forwards;
+}
+.nutrient-bar {
+transition: width 0.5s ease-out;
+}
+</style>
+<style>@view-transition { navigation: auto; }</style>
+"<script src=""/_sdk/data_sdk.js"" type=""text/javascript""></script>"
+</head>
+"<body class=""h-full m-0 p-0"">"
+"<div id=""app-wrapper"" class=""h-full w-full overflow-auto"" style=""background: #0f172a;"">"
+"<div class=""min-h-full w-full p-6 md:p-10""><!-- Header -->"
+"<header class=""max-w-5xl mx-auto mb-8"">"
+"<div class=""flex items-center gap-3 mb-2"">"
+"<div class=""w-12 h-12 rounded-xl flex items-center justify-center"" style=""background: #22c55e;"">"
+"<svg class=""w-7 h-7"" fill=""none"" stroke=""#0f172a"" stroke-width=""2.5"" viewbox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" d=""M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"" />"
+</svg>
+</div>
+"<h1 id=""app-title"" class=""text-3xl md:text-4xl font-bold"" style=""color: #f8fafc;"">Nutritional Database</h1>"
+</div>
+"<p class=""text-lg"" style=""color: #94a3b8;"">Explore nutritional values for common foods and ingredients</p>"
+</header><!-- Search and Filter -->
+"<div class=""max-w-5xl mx-auto mb-8"">"
+"<div class=""flex flex-col md:flex-row gap-4"">"
+"<div class=""flex-1 relative"">"
+"<svg class=""absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5"" style=""color: #64748b;"" fill=""none"" stroke=""currentColor"" stroke-width=""2"" viewbox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" d=""M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"" />"
+"</svg><input type=""text"" id=""search-input"" placeholder=""Search foods..."" class=""w-full pl-12 pr-4 py-4 rounded-xl text-lg focus:outline-none focus:ring-2 transition-all"" style=""background: #1e293b; color: #f8fafc; border: 2px solid #334155;"" onfocus=""this.style.borderColor='#22c55e'"" onblur=""this.style.borderColor='#334155'"">"
+"</div><select id=""category-filter"" class=""px-6 py-4 rounded-xl text-lg cursor-pointer focus:outline-none focus:ring-2 transition-all"" style=""background: #1e293b; color: #f8fafc; border: 2px solid #334155;""> <option value=""all"">All Categories</option> <option value=""fruits"">🍎 Fruits</option> <option value=""vegetables"">🥦 Vegetables</option> <option value=""proteins"">🥩 Proteins</option> <option value=""grains"">🌾 Grains</option> <option value=""dairy"">🥛 Dairy</option> <option value=""nuts"">🥜 Nuts &amp; Seeds</option> </select>"
+</div>
+</div><!-- Food Grid -->
+"<div id=""food-grid"" class=""max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4""><!-- Foods will be rendered here -->"
+</div><!-- Detail Modal -->
+"<div id=""detail-modal"" class=""fixed inset-0 z-50 hidden items-center justify-center p-4"" style=""background: rgba(0,0,0,0.8);"">"
+"<div class=""w-full max-w-2xl max-h-[90%] overflow-auto rounded-2xl scrollbar-thin"" style=""background: #1e293b;"">"
+"<div id=""modal-content""><!-- Modal content will be rendered here -->"
+</div>
+</div>
+</div><!-- Results Count -->
+"<div class=""max-w-5xl mx-auto mt-6 text-center"">"
+"<p id=""results-count"" class=""text-sm"" style=""color: #64748b;""></p>"
+</div>
+</div>
+</div>
+<script>
+const defaultConfig = {
+"app_title: 'Nutritional Database',"
+"search_placeholder: 'Search foods...',"
+"background_color: '#0f172a',"
+"surface_color: '#1e293b',"
+"text_color: '#f8fafc',"
+"primary_action_color: '#22c55e',"
+"secondary_action_color: '#64748b',"
+"font_family: 'DM Sans',"
+"font_size: 16,"
+show_micronutrients: 'true'
+};
+
+const foodDatabase = [
+"{ id: 1, name: 'Apple', emoji: '🍎', category: 'fruits', serving: '1 medium (182g)', calories: 95, protein: 0.5, carbs: 25, fat: 0.3, fiber: 4.4, sugar: 19, vitaminC: 14, potassium: 195, vitaminA: 5, iron: 0.2, calcium: 11, magnesium: 9, zinc: 0.1 },"
+"{ id: 2, name: 'Banana', emoji: '🍌', category: 'fruits', serving: '1 medium (118g)', calories: 105, protein: 1.3, carbs: 27, fat: 0.4, fiber: 3.1, sugar: 14, vitaminC: 17, potassium: 422, vitaminA: 3, iron: 0.3, calcium: 6, magnesium: 34, zinc: 0.2 },"
+"{ id: 3, name: 'Orange', emoji: '🍊', category: 'fruits', serving: '1 medium (131g)', calories: 62, protein: 1.2, carbs: 15, fat: 0.2, fiber: 3.1, sugar: 12, vitaminC: 70, potassium: 237, vitaminA: 11, iron: 0.1, calcium: 52, magnesium: 13, zinc: 0.1 },"
+"{ id: 4, name: 'Strawberries', emoji: '🍓', category: 'fruits', serving: '1 cup (144g)', calories: 46, protein: 1, carbs: 11, fat: 0.4, fiber: 3, sugar: 7, vitaminC: 89, potassium: 220, vitaminA: 1, iron: 0.4, calcium: 24, magnesium: 13, zinc: 0.2 },"
+"{ id: 5, name: 'Blueberries', emoji: '🫐', category: 'fruits', serving: '1 cup (148g)', calories: 84, protein: 1.1, carbs: 21, fat: 0.5, fiber: 3.6, sugar: 15, vitaminC: 24, potassium: 114, vitaminA: 3, iron: 0.3, calcium: 9, magnesium: 9, zinc: 0.3 },"
+"{ id: 6, name: 'Avocado', emoji: '🥑', category: 'fruits', serving: '1 medium (201g)', calories: 322, protein: 4, carbs: 17, fat: 29, fiber: 13, sugar: 1.3, vitaminC: 20, potassium: 975, vitaminA: 7, iron: 0.6, calcium: 19, magnesium: 43, zinc: 1.3 },"
+"{ id: 7, name: 'Broccoli', emoji: '🥦', category: 'vegetables', serving: '1 cup (91g)', calories: 31, protein: 2.5, carbs: 6, fat: 0.3, fiber: 2.4, sugar: 1.5, vitaminC: 81, potassium: 288, vitaminA: 12, iron: 0.7, calcium: 47, magnesium: 19, zinc: 0.4 },"
+"{ id: 8, name: 'Carrots', emoji: '🥕', category: 'vegetables', serving: '1 medium (61g)', calories: 25, protein: 0.6, carbs: 6, fat: 0.1, fiber: 1.7, sugar: 2.9, vitaminC: 4, potassium: 195, vitaminA: 184, iron: 0.2, calcium: 20, magnesium: 7, zinc: 0.1 },"
+"{ id: 9, name: 'Spinach', emoji: '🥬', category: 'vegetables', serving: '1 cup raw (30g)', calories: 7, protein: 0.9, carbs: 1.1, fat: 0.1, fiber: 0.7, sugar: 0.1, vitaminC: 8, potassium: 167, vitaminA: 34, iron: 0.8, calcium: 30, magnesium: 24, zinc: 0.2 },"
+"{ id: 10, name: 'Sweet Potato', emoji: '🍠', category: 'vegetables', serving: '1 medium (114g)', calories: 103, protein: 2.3, carbs: 24, fat: 0.1, fiber: 3.8, sugar: 7, vitaminC: 22, potassium: 438, vitaminA: 142, iron: 0.5, calcium: 56, magnesium: 29, zinc: 0.3 },"
+"{ id: 11, name: 'Bell Pepper', emoji: '🫑', category: 'vegetables', serving: '1 medium (119g)', calories: 31, protein: 1, carbs: 6, fat: 0.3, fiber: 2.1, sugar: 4.2, vitaminC: 152, potassium: 251, vitaminA: 31, iron: 0.4, calcium: 12, magnesium: 12, zinc: 0.2 },"
+"{ id: 12, name: 'Tomato', emoji: '🍅', category: 'vegetables', serving: '1 medium (123g)', calories: 22, protein: 1.1, carbs: 4.8, fat: 0.2, fiber: 1.5, sugar: 3.2, vitaminC: 17, potassium: 292, vitaminA: 20, iron: 0.3, calcium: 12, magnesium: 11, zinc: 0.2 },"
+"{ id: 13, name: 'Chicken Breast', emoji: '🍗', category: 'proteins', serving: '100g cooked', calories: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0, sugar: 0, vitaminC: 0, potassium: 256, vitaminA: 0, iron: 1.3, calcium: 15, magnesium: 29, zinc: 1 },"
+"{ id: 14, name: 'Salmon', emoji: '🐟', category: 'proteins', serving: '100g cooked', calories: 208, protein: 20, carbs: 0, fat: 13, fiber: 0, sugar: 0, vitaminC: 0, potassium: 363, vitaminA: 45, iron: 0.8, calcium: 12, magnesium: 27, zinc: 0.8 },"
+"{ id: 15, name: 'Eggs', emoji: '🥚', category: 'proteins', serving: '1 large (50g)', calories: 72, protein: 6.3, carbs: 0.4, fat: 5, fiber: 0, sugar: 0.2, vitaminC: 0, potassium: 69, vitaminA: 32, iron: 1.2, calcium: 28, magnesium: 5, zinc: 0.6 },"
+"{ id: 16, name: 'Beef (Lean)', emoji: '🥩', category: 'proteins', serving: '100g cooked', calories: 250, protein: 26, carbs: 0, fat: 15, fiber: 0, sugar: 0, vitaminC: 0, potassium: 318, vitaminA: 0, iron: 3.6, calcium: 24, magnesium: 24, zinc: 6 },"
+"{ id: 17, name: 'Tofu', emoji: '🧈', category: 'proteins', serving: '100g', calories: 76, protein: 8, carbs: 1.9, fat: 4.8, fiber: 0.3, sugar: 0.6, vitaminC: 0, potassium: 121, vitaminA: 0, iron: 5.4, calcium: 277, magnesium: 37, zinc: 1.5 },"
+"{ id: 18, name: 'Brown Rice', emoji: '🍚', category: 'grains', serving: '1 cup cooked (195g)', calories: 216, protein: 5, carbs: 45, fat: 1.8, fiber: 3.5, sugar: 0.7, vitaminC: 0, potassium: 84, vitaminA: 0, iron: 0.8, calcium: 20, magnesium: 84, zinc: 1.2 },"
+"{ id: 19, name: 'Oatmeal', emoji: '🥣', category: 'grains', serving: '1 cup cooked (234g)', calories: 158, protein: 6, carbs: 27, fat: 3.2, fiber: 4, sugar: 1.1, vitaminC: 0, potassium: 164, vitaminA: 0, iron: 4.3, calcium: 54, magnesium: 68, zinc: 4.7 },"
+"{ id: 20, name: 'Quinoa', emoji: '🌾', category: 'grains', serving: '1 cup cooked (185g)', calories: 222, protein: 8.1, carbs: 39, fat: 3.6, fiber: 5.2, sugar: 1.6, vitaminC: 0, potassium: 318, vitaminA: 0, iron: 2.8, calcium: 31, magnesium: 118, zinc: 2 },"
+"{ id: 21, name: 'Whole Wheat Bread', emoji: '🍞', category: 'grains', serving: '1 slice (43g)', calories: 81, protein: 4, carbs: 14, fat: 1.1, fiber: 1.9, sugar: 1.4, vitaminC: 0, potassium: 81, vitaminA: 0, iron: 1.6, calcium: 25, magnesium: 24, zinc: 0.7 },"
+"{ id: 22, name: 'Milk (2%)', emoji: '🥛', category: 'dairy', serving: '1 cup (244ml)', calories: 122, protein: 8.1, carbs: 12, fat: 4.8, fiber: 0, sugar: 12, vitaminC: 0, potassium: 342, vitaminA: 45, iron: 0.1, calcium: 293, magnesium: 27, zinc: 0.9 },"
+"{ id: 23, name: 'Greek Yogurt', emoji: '🥄', category: 'dairy', serving: '1 cup (245g)', calories: 100, protein: 17, carbs: 6, fat: 0.7, fiber: 0, sugar: 4, vitaminC: 0, potassium: 240, vitaminA: 21, iron: 0.1, calcium: 300, magnesium: 20, zinc: 0.6 },"
+"{ id: 24, name: 'Cheddar Cheese', emoji: '🧀', category: 'dairy', serving: '1 oz (28g)', calories: 113, protein: 7, carbs: 0.4, fat: 9.3, fiber: 0, sugar: 0.1, vitaminC: 0, potassium: 28, vitaminA: 75, iron: 0.7, calcium: 202, magnesium: 8, zinc: 2.8 },"
+"{ id: 25, name: 'Almonds', emoji: '🥜', category: 'nuts', serving: '1 oz (28g)', calories: 164, protein: 6, carbs: 6, fat: 14, fiber: 3.5, sugar: 1.2, vitaminC: 0, potassium: 208, vitaminA: 0, iron: 1.3, calcium: 76, magnesium: 76, zinc: 0.9 },"
+"{ id: 26, name: 'Walnuts', emoji: '🌰', category: 'nuts', serving: '1 oz (28g)', calories: 185, protein: 4.3, carbs: 3.9, fat: 18, fiber: 1.9, sugar: 0.7, vitaminC: 0, potassium: 125, vitaminA: 1, iron: 0.8, calcium: 28, magnesium: 45, zinc: 0.9 },"
+"{ id: 27, name: 'Peanut Butter', emoji: '🥜', category: 'nuts', serving: '2 tbsp (32g)', calories: 188, protein: 8, carbs: 6, fat: 16, fiber: 1.9, sugar: 3, vitaminC: 0, potassium: 189, vitaminA: 0, iron: 0.6, calcium: 18, magnesium: 51, zinc: 0.9 },"
+"{ id: 28, name: 'Chia Seeds', emoji: '🫘', category: 'nuts', serving: '1 oz (28g)', calories: 138, protein: 4.7, carbs: 12, fat: 8.7, fiber: 9.8, sugar: 0, vitaminC: 0, potassium: 115, vitaminA: 1, iron: 1.6, calcium: 179, magnesium: 95, zinc: 1.3 },"
+"{ id: 29, name: 'Flax Seeds', emoji: '🌱', category: 'nuts', serving: '1 tbsp (10g)', calories: 55, protein: 1.9, carbs: 3, fat: 4.3, fiber: 2.8, sugar: 0.2, vitaminC: 0, potassium: 84, vitaminA: 0, iron: 0.6, calcium: 26, magnesium: 44, zinc: 0.4 },"
+"{ id: 30, name: 'Mango', emoji: '🥭', category: 'fruits', serving: '1 cup (165g)', calories: 99, protein: 1.4, carbs: 25, fat: 0.6, fiber: 2.6, sugar: 23, vitaminC: 60, potassium: 277, vitaminA: 54, iron: 0.3, calcium: 11, magnesium: 18, zinc: 0.1 },"
+"{ id: 31, name: 'Kiwi', emoji: '🥝', category: 'fruits', serving: '2 medium (152g)', calories: 92, protein: 1.7, carbs: 20, fat: 0.6, fiber: 3.8, sugar: 12, vitaminC: 198, potassium: 312, vitaminA: 4, iron: 0.5, calcium: 61, magnesium: 17, zinc: 0.2 },"
+"{ id: 32, name: 'Pineapple', emoji: '🍍', category: 'fruits', serving: '1 cup (155g)', calories: 82, protein: 0.9, carbs: 22, fat: 0.2, fiber: 2.7, sugar: 17, vitaminC: 131, potassium: 180, vitaminA: 1, iron: 0.3, calcium: 22, magnesium: 20, zinc: 0.2 },"
+"{ id: 33, name: 'Kale', emoji: '🥬', category: 'vegetables', serving: '1 cup (67g)', calories: 33, protein: 2.2, carbs: 6, fat: 0.6, fiber: 1.3, sugar: 0.9, vitaminC: 80, potassium: 299, vitaminA: 133, iron: 1.1, calcium: 90, magnesium: 23, zinc: 0.3 },"
+"{ id: 34, name: 'Cucumber', emoji: '🥒', category: 'vegetables', serving: '1 cup (104g)', calories: 16, protein: 0.8, carbs: 3.6, fat: 0.1, fiber: 0.5, sugar: 1.7, vitaminC: 3, potassium: 142, vitaminA: 5, iron: 0.3, calcium: 16, magnesium: 13, zinc: 0.2 },"
+"{ id: 35, name: 'Garlic', emoji: '🧄', category: 'vegetables', serving: '3 cloves (9g)', calories: 13, protein: 0.6, carbs: 3, fat: 0, fiber: 0.2, sugar: 0, vitaminC: 3, potassium: 59, vitaminA: 0, iron: 0.2, calcium: 16, magnesium: 2, zinc: 0.1 },"
+"{ id: 36, name: 'Lentils', emoji: '🍲', category: 'proteins', serving: '1 cup cooked (198g)', calories: 230, protein: 18, carbs: 40, fat: 0.8, fiber: 15.6, sugar: 2, vitaminC: 2, potassium: 731, vitaminA: 2, iron: 6.6, calcium: 38, magnesium: 71, zinc: 2.5 },"
+"{ id: 37, name: 'Chickpeas', emoji: '⭐', category: 'proteins', serving: '1 cup cooked (269g)', calories: 269, protein: 15, carbs: 45, fat: 4.3, fiber: 12, sugar: 8, vitaminC: 2, potassium: 477, vitaminA: 2, iron: 4.7, calcium: 80, magnesium: 78, zinc: 2.4 },"
+"{ id: 38, name: 'Turkey Breast', emoji: '🦃', category: 'proteins', serving: '100g cooked', calories: 135, protein: 29, carbs: 0, fat: 1, fiber: 0, sugar: 0, vitaminC: 0, potassium: 300, vitaminA: 0, iron: 1.8, calcium: 25, magnesium: 26, zinc: 2.5 },"
+"{ id: 39, name: 'Tuna', emoji: '🐠', category: 'proteins', serving: '100g canned', calories: 132, protein: 23, carbs: 0, fat: 4.6, fiber: 0, sugar: 0, vitaminC: 0, potassium: 201, vitaminA: 8, iron: 1.3, calcium: 17, magnesium: 27, zinc: 0.8 },"
+"{ id: 40, name: 'Mozzarella', emoji: '🧀', category: 'dairy', serving: '1 oz (28g)', calories: 85, protein: 6.3, carbs: 0.6, fat: 6.3, fiber: 0, sugar: 0.3, vitaminC: 0, potassium: 23, vitaminA: 48, iron: 0.2, calcium: 505, magnesium: 6, zinc: 0.7 }"
+];
+
+let filteredFoods = [...foodDatabase];
+
+"function renderFoodCard(food, index) {"
+const delay = index * 50;
+return `
+"<div class=""rounded-xl p-5 cursor-pointer transition-all duration-300 hover:scale-[1.02] animate-fade-in"""
+"style=""background: ${window.elementSdk?.config?.surface_color || defaultConfig.surface_color}; animation-delay: ${delay}ms;"""
+"onclick=""showFoodDetail(${food.id})"">"
+"<div class=""flex items-start justify-between mb-3"">"
+"<div class=""flex items-center gap-3"">"
+"<span class=""text-4xl"">${food.emoji}</span>"
+<div>
+"<h3 class=""font-bold text-lg"" style=""color: ${window.elementSdk?.config?.text_color || defaultConfig.text_color};"">${food.name}</h3>"
+"<p class=""text-sm capitalize"" style=""color: ${window.elementSdk?.config?.secondary_action_color || defaultConfig.secondary_action_color};"">${food.category}</p>"
+</div>
+</div>
+"<div class=""text-right"">"
+"<span class=""text-2xl font-bold"" style=""color: ${window.elementSdk?.config?.primary_action_color || defaultConfig.primary_action_color};"">${food.calories}</span>"
+"<p class=""text-xs"" style=""color: ${window.elementSdk?.config?.secondary_action_color || defaultConfig.secondary_action_color};"">kcal</p>"
+</div>
+</div>
+"<p class=""text-xs mb-3"" style=""color: ${window.elementSdk?.config?.secondary_action_color || defaultConfig.secondary_action_color};"">Per ${food.serving}</p>"
+"<div class=""grid grid-cols-3 gap-2"">"
+"<div class=""text-center p-2 rounded-lg"" style=""background: ${window.elementSdk?.config?.background_color || defaultConfig.background_color};"">"
+"<p class=""font-bold text-sm"" style=""color: #ef4444;"">${food.protein}g</p>"
+"<p class=""text-xs"" style=""color: ${window.elementSdk?.config?.secondary_action_color || defaultConfig.secondary_action_color};"">Protein</p>"
+</div>
+"<div class=""text-center p-2 rounded-lg"" style=""background: ${window.elementSdk?.config?.background_color || defaultConfig.background_color};"">"
+"<p class=""font-bold text-sm"" style=""color: #3b82f6;"">${food.carbs}g</p>"
+"<p class=""text-xs"" style=""color: ${window.elementSdk?.config?.secondary_action_color || defaultConfig.secondary_action_color};"">Carbs</p>"
+</div>
+"<div class=""text-center p-2 rounded-lg"" style=""background: ${window.elementSdk?.config?.background_color || defaultConfig.background_color};"">"
+"<p class=""font-bold text-sm"" style=""color: #f59e0b;"">${food.fat}g</p>"
+"<p class=""text-xs"" style=""color: ${window.elementSdk?.config?.secondary_action_color || defaultConfig.secondary_action_color};"">Fat</p>"
+</div>
+</div>
+</div>
+`;
+}
+
+function renderFoodGrid() {
+const grid = document.getElementById('food-grid');
+const resultsCount = document.getElementById('results-count');
+
+if (filteredFoods.length === 0) {
+grid.innerHTML = `
+"<div class=""col-span-full text-center py-16"">"
+"<span class=""text-6xl mb-4 block"">🔍</span>"
+"<p class=""text-xl"" style=""color: ${window.elementSdk?.config?.text_color || defaultConfig.text_color};"">No foods found</p>"
+"<p style=""color: ${window.elementSdk?.config?.secondary_action_color || defaultConfig.secondary_action_color};"">Try adjusting your search or filter</p>"
+</div>
+`;
+resultsCount.textContent = '0 results';
+} else {
+"grid.innerHTML = filteredFoods.map((food, index) => renderFoodCard(food, index)).join('');"
+resultsCount.textContent = `Showing ${filteredFoods.length} of ${foodDatabase.length} foods`;
+}
+}
+
+function showFoodDetail(foodId) {
+const food = foodDatabase.find(f => f.id === foodId);
+if (!food) return;
+
+const config = window.elementSdk?.config || defaultConfig;
+const maxCalories = 350;
+const maxProtein = 35;
+const maxCarbs = 50;
+const maxFat = 30;
+const maxFiber = 15;
+
+const modal = document.getElementById('detail-modal');
+const content = document.getElementById('modal-content');
+
+content.innerHTML = `
+"<div class=""p-6"">"
+"<div class=""flex items-start justify-between mb-6"">"
+"<div class=""flex items-center gap-4"">"
+"<span class=""text-6xl"">${food.emoji}</span>"
+<div>
+"<h2 class=""text-2xl font-bold"" style=""color: ${config.text_color};"">${food.name}</h2>"
+"<p class=""capitalize"" style=""color: ${config.secondary_action_color};"">${food.category}</p>"
+"<p class=""text-sm mt-1"" style=""color: ${config.secondary_action_color};"">Serving: ${food.serving}</p>"
+</div>
+</div>
+"<button onclick=""closeModal()"" class=""p-2 rounded-lg transition-colors hover:opacity-80"" style=""background: ${config.background_color};"">"
+"<svg class=""w-6 h-6"" fill=""none"" stroke=""${config.text_color}"" stroke-width=""2"" viewBox=""0 0 24 24"">"
+"<path stroke-linecap=""round"" stroke-linejoin=""round"" d=""M6 18L18 6M6 6l12 12""/>"
+</svg>
+</button>
+</div>
+
+<!-- Calories Display -->
+"<div class=""text-center p-6 rounded-xl mb-6"" style=""background: ${config.background_color};"">"
+"<span class=""text-5xl font-bold"" style=""color: ${config.primary_action_color};"">${food.calories}</span>"
+"<p class=""text-lg mt-1"" style=""color: ${config.secondary_action_color};"">Calories</p>"
+</div>
+
+<!-- Macros Section -->
+"<h3 class=""font-bold text-lg mb-4"" style=""color: ${config.text_color};"">Macronutrients</h3>"
+"<div class=""space-y-4 mb-6"">"
+<div>
+"<div class=""flex justify-between mb-1"">"
+"<span style=""color: ${config.text_color};"">Protein</span>"
+"<span class=""font-bold"" style=""color: #ef4444;"">${food.protein}g</span>"
+</div>
+"<div class=""h-3 rounded-full overflow-hidden"" style=""background: ${config.background_color};"">"
+"<div class=""h-full rounded-full nutrient-bar"" style=""width: ${Math.min((food.protein / maxProtein) * 100, 100)}%; background: #ef4444;""></div>"
+</div>
+</div>
+<div>
+"<div class=""flex justify-between mb-1"">"
+"<span style=""color: ${config.text_color};"">Carbohydrates</span>"
+"<span class=""font-bold"" style=""color: #3b82f6;"">${food.carbs}g</span>"
+</div>
+"<div class=""h-3 rounded-full overflow-hidden"" style=""background: ${config.background_color};"">"
+"<div class=""h-full rounded-full nutrient-bar"" style=""width: ${Math.min((food.carbs / maxCarbs) * 100, 100)}%; background: #3b82f6;""></div>"
+</div>
+</div>
+<div>
+"<div class=""flex justify-between mb-1"">"
+"<span style=""color: ${config.text_color};"">Fat</span>"
+"<span class=""font-bold"" style=""color: #f59e0b;"">${food.fat}g</span>"
+</div>
+"<div class=""h-3 rounded-full overflow-hidden"" style=""background: ${config.background_color};"">"
+"<div class=""h-full rounded-full nutrient-bar"" style=""width: ${Math.min((food.fat / maxFat) * 100, 100)}%; background: #f59e0b;""></div>"
+</div>
+</div>
+<div>
+"<div class=""flex justify-between mb-1"">"
+"<span style=""color: ${config.text_color};"">Fiber</span>"
+"<span class=""font-bold"" style=""color: #22c55e;"">${food.fiber}g</span>"
+</div>
+"<div class=""h-3 rounded-full overflow-hidden"" style=""background: ${config.background_color};"">"
+"<div class=""h-full rounded-full nutrient-bar"" style=""width: ${Math.min((food.fiber / maxFiber) * 100, 100)}%; background: #22c55e;""></div>"
+</div>
+</div>
+</div>
+
+<!-- Additional Nutrients -->
+"<h3 class=""font-bold text-lg mb-4"" style=""color: ${config.text_color};"">Additional Nutrients</h3>"
+"<div class=""grid grid-cols-3 gap-3 mb-6"">"
+"<div class=""p-4 rounded-xl text-center"" style=""background: ${config.background_color};"">"
+"<p class=""text-2xl font-bold"" style=""color: ${config.primary_action_color};"">${food.sugar}g</p>"
+"<p class=""text-sm"" style=""color: ${config.secondary_action_color};"">Sugar</p>"
+</div>
+"<div class=""p-4 rounded-xl text-center"" style=""background: ${config.background_color};"">"
+"<p class=""text-2xl font-bold"" style=""color: ${config.primary_action_color};"">${food.vitaminC}mg</p>"
+"<p class=""text-sm"" style=""color: ${config.secondary_action_color};"">Vitamin C</p>"
+</div>
+"<div class=""p-4 rounded-xl text-center"" style=""background: ${config.background_color};"">"
+"<p class=""text-2xl font-bold"" style=""color: ${config.primary_action_color};"">${food.potassium}mg</p>"
+"<p class=""text-sm"" style=""color: ${config.secondary_action_color};"">Potassium</p>"
+</div>
+</div>
+
+${(config.show_micronutrients === 'true' || config.show_micronutrients === true) ? `
+<!-- Micronutrients Section -->
+"<h3 class=""font-bold text-lg mb-4"" style=""color: ${config.text_color};"">Micronutrients</h3>"
+"<div class=""grid grid-cols-2 gap-3"">"
+"<div class=""p-3 rounded-lg"" style=""background: ${config.background_color};"">"
+"<p class=""text-sm font-bold"" style=""color: ${config.primary_action_color};"">${food.vitaminA}μg</p>"
+"<p class=""text-xs"" style=""color: ${config.secondary_action_color};"">Vitamin A</p>"
+</div>
+"<div class=""p-3 rounded-lg"" style=""background: ${config.background_color};"">"
+"<p class=""text-sm font-bold"" style=""color: ${config.primary_action_color};"">${food.iron}mg</p>"
+"<p class=""text-xs"" style=""color: ${config.secondary_action_color};"">Iron</p>"
+</div>
+"<div class=""p-3 rounded-lg"" style=""background: ${config.background_color};"">"
+"<p class=""text-sm font-bold"" style=""color: ${config.primary_action_color};"">${food.calcium}mg</p>"
+"<p class=""text-xs"" style=""color: ${config.secondary_action_color};"">Calcium</p>"
+</div>
+"<div class=""p-3 rounded-lg"" style=""background: ${config.background_color};"">"
+"<p class=""text-sm font-bold"" style=""color: ${config.primary_action_color};"">${food.magnesium}mg</p>"
+"<p class=""text-xs"" style=""color: ${config.secondary_action_color};"">Magnesium</p>"
+</div>
+"<div class=""p-3 rounded-lg"" style=""background: ${config.background_color};"">"
+"<p class=""text-sm font-bold"" style=""color: ${config.primary_action_color};"">${food.zinc}mg</p>"
+"<p class=""text-xs"" style=""color: ${config.secondary_action_color};"">Zinc</p>"
+</div>
+</div>
+` : ''}
+</div>
+`;
+
+modal.classList.remove('hidden');
+modal.classList.add('flex');
+}
+
+function closeModal() {
+const modal = document.getElementById('detail-modal');
+modal.classList.add('hidden');
+modal.classList.remove('flex');
+}
+
+function filterFoods() {
+const searchTerm = document.getElementById('search-input').value.toLowerCase();
+const category = document.getElementById('category-filter').value;
+
+filteredFoods = foodDatabase.filter(food => {
+const matchesSearch = food.name.toLowerCase().includes(searchTerm);
+const matchesCategory = category === 'all' || food.category === category;
+return matchesSearch && matchesCategory;
+});
+
+renderFoodGrid();
+}
+
+// Event Listeners
+"document.getElementById('search-input').addEventListener('input', filterFoods);"
+"document.getElementById('category-filter').addEventListener('change', filterFoods);"
+"document.getElementById('detail-modal').addEventListener('click', function(e) {"
+if (e.target === this) closeModal();
+});
+
+// Element SDK Integration
+async function onConfigChange(config) {
+const appTitle = document.getElementById('app-title');
+const searchInput = document.getElementById('search-input');
+const appWrapper = document.getElementById('app-wrapper');
+
+appTitle.textContent = config.app_title || defaultConfig.app_title;
+searchInput.placeholder = config.search_placeholder || defaultConfig.search_placeholder;
+appWrapper.style.background = config.background_color || defaultConfig.background_color;
+
+// Apply font
+const font = config.font_family || defaultConfig.font_family;
+document.querySelectorAll('*').forEach(el => {
+"el.style.fontFamily = `${font}, sans-serif`;"
+});
+
+// Apply font size scaling
+const baseSize = config.font_size || defaultConfig.font_size;
+appTitle.style.fontSize = `${baseSize * 2}px`;
+
+renderFoodGrid();
+}
+
+function mapToCapabilities(config) {
+return {
+recolorables: [
+{
+"get: () => config.background_color || defaultConfig.background_color,"
+set: (value) => { config.background_color = value; window.elementSdk.setConfig({ background_color: value }); }
+"},"
+{
+"get: () => config.surface_color || defaultConfig.surface_color,"
+set: (value) => { config.surface_color = value; window.elementSdk.setConfig({ surface_color: value }); }
+"},"
+{
+"get: () => config.text_color || defaultConfig.text_color,"
+set: (value) => { config.text_color = value; window.elementSdk.setConfig({ text_color: value }); }
+"},"
+{
+"get: () => config.primary_action_color || defaultConfig.primary_action_color,"
+set: (value) => { config.primary_action_color = value; window.elementSdk.setConfig({ primary_action_color: value }); }
+"},"
+{
+"get: () => config.secondary_action_color || defaultConfig.secondary_action_color,"
+set: (value) => { config.secondary_action_color = value; window.elementSdk.setConfig({ secondary_action_color: value }); }
+}
+"],"
+"borderables: [],"
+fontEditable: {
+"get: () => config.font_family || defaultConfig.font_family,"
+set: (value) => { config.font_family = value; window.elementSdk.setConfig({ font_family: value }); }
+"},"
+fontSizeable: {
+"get: () => config.font_size || defaultConfig.font_size,"
+set: (value) => { config.font_size = value; window.elementSdk.setConfig({ font_size: value }); }
+}
+};
+}
+
+function mapToEditPanelValues(config) {
+return new Map([
+"['app_title', config.app_title || defaultConfig.app_title],"
+"['search_placeholder', config.search_placeholder || defaultConfig.search_placeholder],"
+"['show_micronutrients', config.show_micronutrients || defaultConfig.show_micronutrients]"
+]);
+}
+
+// Initialize
+if (window.elementSdk) {
+window.elementSdk.init({
+"defaultConfig,"
+"onConfigChange,"
+"mapToCapabilities,"
+mapToEditPanelValues
+});
+}
+
+renderFoodGrid();
+</script>
+"<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML=""window.__CF$cv$params={r:'9c90a1d3b7164fad',t:'MTc3MDI3NTg4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>"
+</html>
